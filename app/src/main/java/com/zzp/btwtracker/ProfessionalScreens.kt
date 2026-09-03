@@ -55,11 +55,15 @@ import java.text.NumberFormat
 import java.time.LocalDate
 import java.time.temporal.ChronoUnit
 import java.util.Locale
+import com.trendyol.design.core.annotation.ExperimentalKompostoApi
+import com.trendyol.design.core.infobox.KPInfoBox
+import com.trendyol.design.core.infobox.KPInfoBoxStyle
 
 private val nlCurrency = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("nl-NL"))
 
 private fun money(cents: Long): String = nlCurrency.format(cents / 100.0)
 
+@OptIn(ExperimentalKompostoApi::class)
 @Composable
 fun ProfessionalOverviewScreen(
     transactions: List<TransactionEntity>,
@@ -145,15 +149,7 @@ fun ProfessionalOverviewScreen(
         }
         if (pendingReceipts.isEmpty() && overdue == 0) {
             item {
-                Card(Modifier.fillMaxWidth()) {
-                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Default.CheckCircle, null)
-                        Column(Modifier.padding(start = 12.dp)) {
-                            Text("Administratie bijgewerkt", fontWeight = FontWeight.SemiBold)
-                            Text("Geen urgente acties voor dit moment.", style = MaterialTheme.typography.bodySmall)
-                        }
-                    }
-                }
+                KPInfoBox(style=KPInfoBoxStyle.Gray,text="Administratie bijgewerkt · geen urgente acties voor dit moment.",modifier=Modifier.fillMaxWidth(),showBorder=true)
             }
         }
         item {
