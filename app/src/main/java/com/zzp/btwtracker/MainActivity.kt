@@ -113,7 +113,7 @@ private fun ZzpProfessionalApp(vm: MainViewModel = viewModel()) {
                     onOpenInvoices = { screen = AppScreen.INVOICES },
                     onOpenReport = { screen = AppScreen.REPORT }
                 )
-                AppScreen.ADMINISTRATION -> AdministrationScreen(transactions, vm::delete)
+                AppScreen.ADMINISTRATION -> AdministrationScreen(transactions, vm::delete, vm::setTransactionCategory)
                 AppScreen.BOOKING -> BookingScreen { draft ->
                     vm.save(draft) { if (it.isSuccess) screen = AppScreen.OVERVIEW }
                 }

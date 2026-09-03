@@ -17,6 +17,8 @@ import com.zzp.btwtracker.tax.BelastingdienstReport
 import com.zzp.btwtracker.tax.DutchVatEngine
 import com.zzp.btwtracker.tax.Quarter
 import com.zzp.btwtracker.tax.TransactionDraft
+import com.zzp.btwtracker.tax.TransactionType
+import com.zzp.btwtracker.tax.VatTreatment
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -107,6 +109,16 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         viewModelScope.launch {
             dao.deleteById(id)
             refreshReport()
+        }
+    }
+    fun setTransactionCategory(id: Long, category: String) = viewModelScope.launch { dao.updateCategory(id, category) }
+
+    fun bookReceipt(item: ReceiptInboxEntity, description: String, rate: Int, onDone: (Result<Long>) -> Unit = {}) {
+        val amount = item.totalCents?.let { BigDecimal(it).movePointLeft(2) }
+        if (amount == null) { onDone(Result.failure(IllegalArgumentException("Totaalbedrag ontbreekt"))); return }
+        save(TransactionDraft(TransactionType.EXPENSE, description.ifBlank { item.merchantName ?: "Gescande bon" }, amount, rate, VatTreatment.DOMESTIC, item.dateEpochDay?.let(LocalDate::ofEpochDay) ?: LocalDate.now(), kvkNumber=item.kvkNumber, explicitVatAmount=item.vatCents?.let { BigDecimal(it).movePointLeft(2) })) { result ->
+            if (result.isSuccess) markReceiptBooked(item.id)
+            onDone(result)
         }
     }
 

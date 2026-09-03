@@ -59,7 +59,15 @@ class CoreLogicTest {
         assertEquals(LocalDate.of(2026, 9, 3), parsed.date)
         assertEquals(BigDecimal("12.10"), parsed.totalAmount)
         assertEquals(BigDecimal("2.10"), parsed.vatAmount)
+        assertEquals("Voorbeeld BV", parsed.merchantName)
+        assertEquals(100, parsed.confidence)
         assertNotNull(parsed.rawText)
+    }
+
+    @Test fun receiptParserAcceptsDotDecimals() {
+        val parsed = ReceiptParser.parse("Shop BV\nBTW 2.10\nTotaal 12.10")
+        assertEquals(BigDecimal("12.10"), parsed.totalAmount)
+        assertEquals(BigDecimal("2.10"), parsed.vatAmount)
     }
 
     @Test fun coachWarnsNearKorLimit() {

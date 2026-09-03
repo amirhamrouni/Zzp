@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CameraAlt
 import androidx.compose.material3.Button
@@ -28,6 +29,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -54,6 +56,7 @@ fun BookingScreen(onSave: (TransactionDraft) -> Unit) {
     var date by remember { mutableStateOf(LocalDate.now().toString()) }
     var kvk by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
+    val inbox by vm.pendingReceipts.collectAsState()
 
     LazyColumn(Modifier.fillMaxSize().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item { Text("Nieuwe boeking", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold) }
@@ -130,17 +133,20 @@ fun ReceiptScannerScreen(
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         if (granted) camera.launch(null) else error = "Cameratoestemming is nodig."
     }
+    val gallery = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
+        uri?.let { scanning=true; scope.launch { runCatching { scanner.scan(context,it) }.onSuccess { result=it }.onFailure { error=it.message }; scanning=false } }
+    }
 
     LazyColumn(Modifier.fillMaxSize().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item { Text("Bon scannen", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold) }
         item {
-            Button(onClick = {
+            Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(onClick = {
                 if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) camera.launch(null)
                 else permission.launch(Manifest.permission.CAMERA)
-            }, modifier = Modifier.fillMaxWidth(), enabled = !scanning) {
+            }, modifier = Modifier.weight(1f), enabled = !scanning) {
                 Icon(Icons.Default.CameraAlt, null)
-                Text("  Maak foto van bon")
-            }
+                Text("  Camera")
+            };Button(onClick={gallery.launch("image/*")},modifier=Modifier.weight(1f),enabled=!scanning){Text("Galerij")}}
         }
         if (scanning) item { Row(verticalAlignment = Alignment.CenterVertically) { CircularProgressIndicator(); Text("  Bon herkennen…") } }
         error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
@@ -149,6 +155,7 @@ fun ReceiptScannerScreen(
                 Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         Text("OCR-resultaat", fontWeight = FontWeight.Bold)
+                        Text("Leverancier: ${scan.merchantName ?: "niet gevonden"} · zekerheid ${scan.confidence}%")
                         Text("Totaal: ${scan.totalAmount ?: "niet gevonden"}")
                         Text("BTW: ${scan.vatAmount ?: "niet gevonden"}")
                         Text("KvK: ${scan.kvkNumber ?: "niet gevonden"}")
@@ -164,7 +171,7 @@ fun ReceiptScannerScreen(
                     else vm.save(
                         TransactionDraft(
                             type = TransactionType.EXPENSE,
-                            description = "Gescande bon",
+                            description = scan.merchantName ?: "Gescande bon",
                             grossAmount = total,
                             vatRate = rate,
                             treatment = VatTreatment.DOMESTIC,
@@ -182,13 +189,25 @@ fun ReceiptScannerScreen(
                     vm.addReceiptToInbox(
                         com.zzp.btwtracker.data.ReceiptInboxEntity(
                             totalCents = totalCents,
+                            merchantName = scan.merchantName,
                             vatCents = vatCents,
                             kvkNumber = scan.kvkNumber,
-                            dateEpochDay = scan.date?.toEpochDay()
+                            dateEpochDay = scan.date?.toEpochDay(),
+                            rawText = scan.rawText
                         )
                     ) { if (it.isSuccess) onBooked() }
                 }) { Text("Bewaar in OCR Inbox voor later") }
             }
+        }
+        if(inbox.isNotEmpty()) item { Text("Te controleren (${inbox.size})",style=MaterialTheme.typography.titleLarge,fontWeight=FontWeight.Bold) }
+        items(inbox,key={it.id}) { item ->
+            var description by remember(item.id){mutableStateOf(item.merchantName ?: "Gescande bon")}; var itemRate by remember(item.id){mutableStateOf(21)}; var itemError by remember(item.id){mutableStateOf<String?>(null)}
+            Card(Modifier.fillMaxWidth()){Column(Modifier.padding(14.dp),verticalArrangement=Arrangement.spacedBy(6.dp)){
+                OutlinedTextField(description,{description=it},label={Text("Omschrijving")},modifier=Modifier.fillMaxWidth())
+                Text("Totaal: ${item.totalCents?.let { "€ %.2f".format(it/100.0) } ?: "ontbreekt"} · BTW: ${item.vatCents?.let { "€ %.2f".format(it/100.0) } ?: "onbekend"}")
+                RateSelectorPublic(itemRate){itemRate=it}; itemError?.let{Text(it,color=MaterialTheme.colorScheme.error)}
+                Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End){TextButton(onClick={vm.dismissReceipt(item.id)}){Text("Verwijder")};Button(onClick={vm.bookReceipt(item,description,itemRate){r->itemError=r.exceptionOrNull()?.message}}){Text("Boeken")}}
+            }}
         }
     }
 }

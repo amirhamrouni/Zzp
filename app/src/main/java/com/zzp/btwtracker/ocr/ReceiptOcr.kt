@@ -1,6 +1,8 @@
 package com.zzp.btwtracker.ocr
 
 import android.graphics.Bitmap
+import android.content.Context
+import android.net.Uri
 import com.google.mlkit.vision.common.InputImage
 import com.google.mlkit.vision.text.TextRecognition
 import com.google.mlkit.vision.text.latin.TextRecognizerOptions
@@ -13,10 +15,12 @@ import kotlin.coroutines.resumeWithException
 
 data class ReceiptScanResult(
     val rawText: String,
+    val merchantName: String?,
     val totalAmount: BigDecimal?,
     val vatAmount: BigDecimal?,
     val kvkNumber: String?,
-    val date: LocalDate?
+    val date: LocalDate?,
+    val confidence: Int
 )
 
 object ReceiptParser {
@@ -39,10 +43,12 @@ object ReceiptParser {
         val date = dateRegex.find(text)?.value?.let(::parseDate)
         return ReceiptScanResult(
             rawText = text,
+            merchantName = lines.firstOrNull { it.length in 3..50 && it.any(Char::isLetter) },
             totalAmount = total,
             vatAmount = vat,
             kvkNumber = kvkRegex.find(text)?.value,
-            date = date
+            date = date,
+            confidence = listOfNotNull(total, vat, date, kvkRegex.find(text)?.value).size * 25
         )
     }
 
@@ -51,7 +57,7 @@ object ReceiptParser {
         .maxOrNull()
 
     private fun String.toMoney(): BigDecimal? = runCatching {
-        replace(".", "").replace(',', '.').toBigDecimal().setScale(2)
+        (if (contains(',')) replace(".", "").replace(',', '.') else this).toBigDecimal().setScale(2)
     }.getOrNull()
 
     private fun parseDate(value: String): LocalDate? {
@@ -72,6 +78,12 @@ class ReceiptOcrScanner {
             .addOnFailureListener { error ->
                 if (continuation.isActive) continuation.resumeWithException(error)
             }
+    }
+
+    suspend fun scan(context: Context, uri: Uri): ReceiptScanResult = suspendCancellableCoroutine { continuation ->
+        val image = runCatching { InputImage.fromFilePath(context, uri) }.getOrElse { continuation.resumeWithException(it); return@suspendCancellableCoroutine }
+        recognizer.process(image).addOnSuccessListener { if (continuation.isActive) continuation.resume(ReceiptParser.parse(it.text)) }
+            .addOnFailureListener { if (continuation.isActive) continuation.resumeWithException(it) }
     }
 
     fun close() = recognizer.close()

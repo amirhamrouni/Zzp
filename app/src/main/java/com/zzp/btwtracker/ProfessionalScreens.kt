@@ -205,7 +205,7 @@ private fun ActionCard(
 }
 
 @Composable
-fun AdministrationScreen(transactions: List<TransactionEntity>, onDelete: (Long) -> Unit) {
+fun AdministrationScreen(transactions: List<TransactionEntity>, onDelete: (Long) -> Unit, onCategory: (Long, String) -> Unit) {
     var filter by remember { mutableStateOf("ALL") }
     val filtered = transactions.filter {
         filter == "ALL" || it.type == filter
@@ -229,6 +229,7 @@ fun AdministrationScreen(transactions: List<TransactionEntity>, onDelete: (Long)
                             Text(money(tx.grossCents), fontWeight = FontWeight.Bold)
                         }
                         Text("${LocalDate.ofEpochDay(tx.dateEpochDay)} · ${tx.vatRate}% · Rubriek ${tx.taxBox}", style = MaterialTheme.typography.bodySmall)
+                        Row(horizontalArrangement=Arrangement.spacedBy(4.dp)){listOf("WERK","REIS","KANTOOR","OVERIG").forEach{cat->FilterChip(selected=tx.category==cat,onClick={onCategory(tx.id,cat)},label={Text(cat.lowercase())})}}
                         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
                             TextButton(onClick = { onDelete(tx.id) }) { Text("Verwijderen") }
                         }

@@ -30,6 +30,7 @@ data class TransactionEntity(
     val vatNumber: String? = null,
     val countryCode: String = "NL",
     val receiptUri: String? = null,
+    val category: String = "OVERIG",
     val createdAt: Long = System.currentTimeMillis()
 )
 
@@ -46,6 +47,7 @@ interface TransactionDao {
     suspend fun totalsForPeriod(startEpochDay: Long, endEpochDay: Long): QuarterTotals
     @Query("DELETE FROM transactions WHERE id = :id")
     suspend fun deleteById(id: Long)
+    @Query("UPDATE transactions SET category=:category WHERE id=:id") suspend fun updateCategory(id: Long, category: String)
 }
 
 @Database(
@@ -59,7 +61,7 @@ interface TransactionDao {
         CompanyProfileEntity::class,
         DocumentEntity::class
     ],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class ZzpDatabase : RoomDatabase() {
@@ -150,6 +152,11 @@ abstract class ZzpDatabase : RoomDatabase() {
                 db.execSQL("CREATE TABLE IF NOT EXISTS documents (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, uri TEXT NOT NULL, displayName TEXT NOT NULL, mimeType TEXT NOT NULL, category TEXT NOT NULL, year INTEGER NOT NULL, quarter INTEGER NOT NULL, createdAt INTEGER NOT NULL)")
             }
         }
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE transactions ADD COLUMN category TEXT NOT NULL DEFAULT 'OVERIG'")
+            }
+        }
 
         fun get(context: Context): ZzpDatabase = instance ?: synchronized(this) {
             instance ?: Room.databaseBuilder(
@@ -157,7 +164,7 @@ abstract class ZzpDatabase : RoomDatabase() {
                 ZzpDatabase::class.java,
                 "zzp_btw_tracker.db"
             )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
                 .build()
                 .also { instance = it }
         }
