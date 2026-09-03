@@ -9,6 +9,8 @@ import androidx.room.PrimaryKey
 import androidx.room.Query
 import androidx.room.Room
 import androidx.room.RoomDatabase
+import androidx.room.migration.Migration
+import androidx.sqlite.db.SupportSQLiteDatabase
 import kotlinx.coroutines.flow.Flow
 
 @Entity(tableName = "transactions")
@@ -46,14 +48,93 @@ interface TransactionDao {
     suspend fun deleteById(id: Long)
 }
 
-@Database(entities = [TransactionEntity::class], version = 1, exportSchema = false)
+@Database(
+    entities = [
+        TransactionEntity::class,
+        CustomerEntity::class,
+        InvoiceEntity::class,
+        ReceiptInboxEntity::class
+    ],
+    version = 2,
+    exportSchema = false
+)
 abstract class ZzpDatabase : RoomDatabase() {
     abstract fun transactionDao(): TransactionDao
+    abstract fun customerDao(): CustomerDao
+    abstract fun invoiceDao(): InvoiceDao
+    abstract fun receiptInboxDao(): ReceiptInboxDao
+
     companion object {
         @Volatile private var instance: ZzpDatabase? = null
+
+        private val MIGRATION_1_2 = object : Migration(1, 2) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS customers (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        name TEXT NOT NULL,
+                        email TEXT,
+                        address TEXT,
+                        postalCode TEXT,
+                        city TEXT,
+                        countryCode TEXT NOT NULL,
+                        kvkNumber TEXT,
+                        vatNumber TEXT,
+                        iban TEXT,
+                        createdAt INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS invoices (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        invoiceNumber TEXT NOT NULL,
+                        customerId INTEGER,
+                        customerName TEXT NOT NULL,
+                        customerEmail TEXT,
+                        issueDateEpochDay INTEGER NOT NULL,
+                        dueDateEpochDay INTEGER NOT NULL,
+                        description TEXT NOT NULL,
+                        netCents INTEGER NOT NULL,
+                        vatRate INTEGER NOT NULL,
+                        vatCents INTEGER NOT NULL,
+                        grossCents INTEGER NOT NULL,
+                        status TEXT NOT NULL,
+                        paidAtEpochDay INTEGER,
+                        createdAt INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS receipt_inbox (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL,
+                        imageUri TEXT,
+                        merchantName TEXT,
+                        totalCents INTEGER,
+                        vatCents INTEGER,
+                        kvkNumber TEXT,
+                        dateEpochDay INTEGER,
+                        rawText TEXT NOT NULL,
+                        status TEXT NOT NULL,
+                        createdAt INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+            }
+        }
+
         fun get(context: Context): ZzpDatabase = instance ?: synchronized(this) {
-            instance ?: Room.databaseBuilder(context.applicationContext, ZzpDatabase::class.java, "zzp_btw_tracker.db")
-                .build().also { instance = it }
+            instance ?: Room.databaseBuilder(
+                context.applicationContext,
+                ZzpDatabase::class.java,
+                "zzp_btw_tracker.db"
+            )
+                .addMigrations(MIGRATION_1_2)
+                .build()
+                .also { instance = it }
         }
     }
 }
