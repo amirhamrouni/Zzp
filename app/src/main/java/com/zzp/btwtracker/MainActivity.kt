@@ -47,6 +47,7 @@ private enum class AppScreen {
     TRIPS,
     COACH,
     COMPANY,
+    DOCUMENTS,
     MORE
 }
 
@@ -63,6 +64,7 @@ private fun ZzpProfessionalApp(vm: MainViewModel = viewModel()) {
     val workSessions by vm.workSessions.collectAsState()
     val businessTrips by vm.businessTrips.collectAsState()
     val companyProfile by vm.companyProfile.collectAsState()
+    val documents by vm.documents.collectAsState()
 
     Scaffold(
         bottomBar = {
@@ -122,13 +124,15 @@ private fun ZzpProfessionalApp(vm: MainViewModel = viewModel()) {
                 AppScreen.TRIPS -> TripsScreen(vm, businessTrips)
                 AppScreen.COACH -> CoachScreen(transactions, invoices, pendingReceipts, workSessions, report.payableCents)
                 AppScreen.COMPANY -> CompanyProfileScreen(vm, companyProfile)
+                AppScreen.DOCUMENTS -> DocumentsScreen(vm, documents)
                 AppScreen.MORE -> MoreScreen(
                     onScan = { screen = AppScreen.SCANNER },
                     onReport = { screen = AppScreen.REPORT },
                     onHours = { screen = AppScreen.HOURS },
                     onTrips = { screen = AppScreen.TRIPS },
                     onCoach = { screen = AppScreen.COACH },
-                    onCompany = { screen = AppScreen.COMPANY }
+                    onCompany = { screen = AppScreen.COMPANY },
+                    onDocuments = { screen = AppScreen.DOCUMENTS }
                 )
             }
         }

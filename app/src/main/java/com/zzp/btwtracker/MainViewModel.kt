@@ -11,6 +11,7 @@ import com.zzp.btwtracker.data.ZzpDatabase
 import com.zzp.btwtracker.data.WorkSessionEntity
 import com.zzp.btwtracker.data.BusinessTripEntity
 import com.zzp.btwtracker.data.CompanyProfileEntity
+import com.zzp.btwtracker.data.DocumentEntity
 import com.zzp.btwtracker.tax.BelastingdienstAggregator
 import com.zzp.btwtracker.tax.BelastingdienstReport
 import com.zzp.btwtracker.tax.DutchVatEngine
@@ -34,6 +35,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val workSessionDao = db.workSessionDao()
     private val businessTripDao = db.businessTripDao()
     private val companyProfileDao = db.companyProfileDao()
+    private val documentDao = db.documentDao()
 
     val transactions: StateFlow<List<TransactionEntity>> = dao.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -53,6 +55,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val companyProfile = companyProfileDao.observe()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+    val documents = documentDao.observeAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun archiveDocument(item: DocumentEntity, onDone: (Result<Long>) -> Unit = {}) = viewModelScope.launch { onDone(runCatching { documentDao.insert(item) }) }
+    fun deleteDocument(id: Long) = viewModelScope.launch { documentDao.delete(id) }
+    fun deleteInvoice(id: Long) = viewModelScope.launch { invoiceDao.delete(id) }
+    fun deleteCustomer(id: Long) = viewModelScope.launch { customerDao.delete(id) }
 
     fun saveCompanyProfile(profile: CompanyProfileEntity, onDone: (Result<Unit>) -> Unit = {}) {
         viewModelScope.launch { onDone(runCatching {

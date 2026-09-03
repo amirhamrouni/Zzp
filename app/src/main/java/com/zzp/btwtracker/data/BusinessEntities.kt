@@ -80,6 +80,7 @@ interface InvoiceDao {
     suspend fun updateStatus(id: Long, status: String, paidAtEpochDay: Long? = null)
     @Query("SELECT COUNT(*) FROM invoices WHERE invoiceNumber LIKE :yearPrefix || '%'")
     suspend fun countForYear(yearPrefix: String): Int
+    @Query("DELETE FROM invoices WHERE id = :id") suspend fun delete(id: Long)
 }
 
 @Dao

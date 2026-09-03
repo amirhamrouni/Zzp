@@ -283,7 +283,7 @@ fun InvoicesScreen(vm: MainViewModel, customers: List<CustomerEntity>, invoices:
             "LIST" -> {
                 if (invoices.isEmpty()) item { Text("Nog geen facturen. Maak je eerste factuur aan.") }
                 items(invoices, key = { it.id }) { invoice ->
-                    InvoiceCard(invoice = invoice, onPaid = { vm.markInvoicePaid(invoice.id) }, onShare = {
+                    InvoiceCard(invoice = invoice, onPaid = { vm.markInvoicePaid(invoice.id) }, onDelete = { vm.deleteInvoice(invoice.id) }, onShare = {
                         runCatching {
                             val profile = requireNotNull(company) { "Vul eerst het bedrijfsprofiel in" }
                             val dir = File(context.cacheDir, "exports").apply { mkdirs() }
@@ -323,6 +323,8 @@ fun InvoicesScreen(vm: MainViewModel, customers: List<CustomerEntity>, invoices:
                                 Text(customer.name, fontWeight = FontWeight.SemiBold)
                                 Text(listOfNotNull(customer.email, customer.city, customer.kvkNumber?.let { "KvK $it" }).joinToString(" · "), style = MaterialTheme.typography.bodySmall)
                             }
+                            Spacer(Modifier.weight(1f))
+                            TextButton(onClick = { vm.deleteCustomer(customer.id) }) { Text("Verwijder") }
                         }
                     }
                 }
@@ -379,7 +381,7 @@ fun InvoicesScreen(vm: MainViewModel, customers: List<CustomerEntity>, invoices:
 }
 
 @Composable
-private fun InvoiceCard(invoice: InvoiceEntity, onPaid: () -> Unit, onShare: () -> Unit) {
+private fun InvoiceCard(invoice: InvoiceEntity, onPaid: () -> Unit, onShare: () -> Unit, onDelete: () -> Unit) {
     val effectiveStatus = if (invoice.status == "OPEN" && invoice.dueDateEpochDay < LocalDate.now().toEpochDay()) "OVERDUE" else invoice.status
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -401,14 +403,14 @@ private fun InvoiceCard(invoice: InvoiceEntity, onPaid: () -> Unit, onShare: () 
                     color = if (effectiveStatus == "OVERDUE") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold
                 )
-                Row { TextButton(onClick = onShare) { Text("PDF delen") }; if (effectiveStatus != "PAID") TextButton(onClick = onPaid) { Text("Betaald") } }
+                Row { TextButton(onClick = onShare) { Text("PDF") }; if (effectiveStatus != "PAID") TextButton(onClick = onPaid) { Text("Betaald") }; TextButton(onClick=onDelete){Text("Wis")} }
             }
         }
     }
 }
 
 @Composable
-fun MoreScreen(onScan: () -> Unit, onReport: () -> Unit, onHours: () -> Unit, onTrips: () -> Unit, onCoach: () -> Unit, onCompany: () -> Unit) {
+fun MoreScreen(onScan: () -> Unit, onReport: () -> Unit, onHours: () -> Unit, onTrips: () -> Unit, onCoach: () -> Unit, onCompany: () -> Unit, onDocuments: () -> Unit) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -423,7 +425,7 @@ fun MoreScreen(onScan: () -> Unit, onReport: () -> Unit, onHours: () -> Unit, on
         item { MenuCard("Urenregistratie", "Registreer zakelijke uren en volg het urencriterium.", onHours) }
         item { MenuCard("Rittenregistratie", "Bewaar zakelijke kilometers en bereken €0,25/km.", onTrips) }
         item { MenuCard("Bedrijfsprofiel", "KvK, BTW-id, IBAN en factuurgegevens.", onCompany) }
-        item { MenuCard("Rapporten & archief", "Jaaroverzicht, documenten en export voor boekhouder.", {}) }
+        item { MenuCard("Documenten & archief", "Bonnen, facturen en bankbestanden per kwartaal.", onDocuments) }
     }
 }
 
