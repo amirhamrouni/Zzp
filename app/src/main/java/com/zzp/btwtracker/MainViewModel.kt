@@ -3,6 +3,9 @@ package com.zzp.btwtracker
 import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import com.zzp.btwtracker.data.CustomerEntity
+import com.zzp.btwtracker.data.InvoiceEntity
+import com.zzp.btwtracker.data.ReceiptInboxEntity
 import com.zzp.btwtracker.data.TransactionEntity
 import com.zzp.btwtracker.data.ZzpDatabase
 import com.zzp.btwtracker.tax.BelastingdienstAggregator
@@ -15,12 +18,27 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import java.math.BigDecimal
+import java.math.RoundingMode
 import java.time.LocalDate
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
-    private val dao = ZzpDatabase.get(application).transactionDao()
+    private val db = ZzpDatabase.get(application)
+    private val dao = db.transactionDao()
+    private val customerDao = db.customerDao()
+    private val invoiceDao = db.invoiceDao()
+    private val receiptInboxDao = db.receiptInboxDao()
 
     val transactions: StateFlow<List<TransactionEntity>> = dao.observeAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val customers: StateFlow<List<CustomerEntity>> = customerDao.observeAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val invoices: StateFlow<List<InvoiceEntity>> = invoiceDao.observeAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val pendingReceipts: StateFlow<List<ReceiptInboxEntity>> = receiptInboxDao.observePending()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val _quarter = MutableStateFlow(Quarter.from(LocalDate.now()))
@@ -44,6 +62,110 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             dao.deleteById(id)
             refreshReport()
         }
+    }
+
+    fun addCustomer(
+        name: String,
+        email: String?,
+        address: String?,
+        postalCode: String?,
+        city: String?,
+        countryCode: String,
+        kvkNumber: String?,
+        vatNumber: String?,
+        iban: String?,
+        onDone: (Result<Long>) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val result = runCatching {
+                require(name.isNotBlank()) { "Naam is verplicht" }
+                customerDao.insert(
+                    CustomerEntity(
+                        name = name.trim(),
+                        email = email?.trim()?.ifBlank { null },
+                        address = address?.trim()?.ifBlank { null },
+                        postalCode = postalCode?.trim()?.ifBlank { null },
+                        city = city?.trim()?.ifBlank { null },
+                        countryCode = countryCode.trim().uppercase().ifBlank { "NL" },
+                        kvkNumber = kvkNumber?.filter(Char::isDigit)?.ifBlank { null },
+                        vatNumber = vatNumber?.trim()?.ifBlank { null },
+                        iban = iban?.replace(" ", "")?.uppercase()?.ifBlank { null }
+                    )
+                )
+            }
+            onDone(result)
+        }
+    }
+
+    fun createInvoice(
+        customer: CustomerEntity,
+        description: String,
+        grossAmount: BigDecimal,
+        vatRate: Int,
+        issueDate: LocalDate,
+        dueDays: Long = 14,
+        onDone: (Result<Long>) -> Unit = {}
+    ) {
+        viewModelScope.launch {
+            val result = runCatching {
+                require(description.isNotBlank()) { "Omschrijving is verplicht" }
+                require(grossAmount > BigDecimal.ZERO) { "Bedrag moet groter zijn dan 0" }
+                require(vatRate in setOf(0, 9, 21)) { "Ongeldig btw-tarief" }
+
+                val grossCents = grossAmount.movePointRight(2).setScale(0, RoundingMode.HALF_UP).longValueExact()
+                val divisor = BigDecimal(100 + vatRate)
+                val netCents = if (vatRate == 0) grossCents else
+                    BigDecimal(grossCents).multiply(BigDecimal(100)).divide(divisor, 0, RoundingMode.HALF_UP).longValueExact()
+                val vatCents = grossCents - netCents
+                val year = issueDate.year
+                val sequence = invoiceDao.countForYear("$year-") + 1
+                val invoiceNumber = "%d-%03d".format(year, sequence)
+
+                invoiceDao.insert(
+                    InvoiceEntity(
+                        invoiceNumber = invoiceNumber,
+                        customerId = customer.id,
+                        customerName = customer.name,
+                        customerEmail = customer.email,
+                        issueDateEpochDay = issueDate.toEpochDay(),
+                        dueDateEpochDay = issueDate.plusDays(dueDays).toEpochDay(),
+                        description = description.trim(),
+                        netCents = netCents,
+                        vatRate = vatRate,
+                        vatCents = vatCents,
+                        grossCents = grossCents,
+                        status = "OPEN"
+                    )
+                )
+            }
+            onDone(result)
+        }
+    }
+
+    fun markInvoicePaid(id: Long) {
+        viewModelScope.launch {
+            invoiceDao.updateStatus(id, "PAID", LocalDate.now().toEpochDay())
+        }
+    }
+
+    fun refreshOverdueInvoices() {
+        viewModelScope.launch {
+            val today = LocalDate.now().toEpochDay()
+            invoices.value.filter { it.status == "OPEN" && it.dueDateEpochDay < today }
+                .forEach { invoiceDao.updateStatus(it.id, "OVERDUE") }
+        }
+    }
+
+    fun addReceiptToInbox(item: ReceiptInboxEntity, onDone: (Result<Long>) -> Unit = {}) {
+        viewModelScope.launch { onDone(runCatching { receiptInboxDao.insert(item) }) }
+    }
+
+    fun dismissReceipt(id: Long) {
+        viewModelScope.launch { receiptInboxDao.updateStatus(id, "DISMISSED") }
+    }
+
+    fun markReceiptBooked(id: Long) {
+        viewModelScope.launch { receiptInboxDao.updateStatus(id, "BOOKED") }
     }
 
     fun moveQuarter(delta: Int) {
