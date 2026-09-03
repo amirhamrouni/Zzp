@@ -1,5 +1,7 @@
 package com.zzp.btwtracker
 
+import android.content.Intent
+
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -34,6 +36,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.collectAsState
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.FileProvider
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -43,6 +48,8 @@ import com.zzp.btwtracker.data.InvoiceEntity
 import com.zzp.btwtracker.data.ReceiptInboxEntity
 import com.zzp.btwtracker.data.TransactionEntity
 import com.zzp.btwtracker.tax.BelastingdienstReport
+import com.zzp.btwtracker.export.InvoiceExportService
+import java.io.File
 import java.math.BigDecimal
 import java.text.NumberFormat
 import java.time.LocalDate
@@ -234,6 +241,8 @@ fun AdministrationScreen(transactions: List<TransactionEntity>, onDelete: (Long)
 
 @Composable
 fun InvoicesScreen(vm: MainViewModel, customers: List<CustomerEntity>, invoices: List<InvoiceEntity>) {
+    val context = LocalContext.current
+    val company by vm.companyProfile.collectAsState()
     var mode by remember { mutableStateOf("LIST") }
     var selectedCustomerId by remember { mutableStateOf<Long?>(null) }
     var description by remember { mutableStateOf("") }
@@ -274,7 +283,16 @@ fun InvoicesScreen(vm: MainViewModel, customers: List<CustomerEntity>, invoices:
             "LIST" -> {
                 if (invoices.isEmpty()) item { Text("Nog geen facturen. Maak je eerste factuur aan.") }
                 items(invoices, key = { it.id }) { invoice ->
-                    InvoiceCard(invoice = invoice, onPaid = { vm.markInvoicePaid(invoice.id) })
+                    InvoiceCard(invoice = invoice, onPaid = { vm.markInvoicePaid(invoice.id) }, onShare = {
+                        runCatching {
+                            val profile = requireNotNull(company) { "Vul eerst het bedrijfsprofiel in" }
+                            val dir = File(context.cacheDir, "exports").apply { mkdirs() }
+                            val file = File(dir, "factuur-${invoice.invoiceNumber}.pdf")
+                            file.writeBytes(InvoiceExportService.pdf(invoice, profile))
+                            val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
+                            context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply { type="application/pdf"; putExtra(Intent.EXTRA_STREAM,uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }, "Factuur delen"))
+                        }.onFailure { message = it.message }
+                    })
                 }
             }
             "CUSTOMERS" -> {
@@ -361,7 +379,7 @@ fun InvoicesScreen(vm: MainViewModel, customers: List<CustomerEntity>, invoices:
 }
 
 @Composable
-private fun InvoiceCard(invoice: InvoiceEntity, onPaid: () -> Unit) {
+private fun InvoiceCard(invoice: InvoiceEntity, onPaid: () -> Unit, onShare: () -> Unit) {
     val effectiveStatus = if (invoice.status == "OPEN" && invoice.dueDateEpochDay < LocalDate.now().toEpochDay()) "OVERDUE" else invoice.status
     Card(Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
@@ -383,14 +401,14 @@ private fun InvoiceCard(invoice: InvoiceEntity, onPaid: () -> Unit) {
                     color = if (effectiveStatus == "OVERDUE") MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.primary,
                     fontWeight = FontWeight.SemiBold
                 )
-                if (effectiveStatus != "PAID") TextButton(onClick = onPaid) { Text("Markeer betaald") }
+                Row { TextButton(onClick = onShare) { Text("PDF delen") }; if (effectiveStatus != "PAID") TextButton(onClick = onPaid) { Text("Betaald") } }
             }
         }
     }
 }
 
 @Composable
-fun MoreScreen(onScan: () -> Unit, onReport: () -> Unit, onHours: () -> Unit, onTrips: () -> Unit, onCoach: () -> Unit) {
+fun MoreScreen(onScan: () -> Unit, onReport: () -> Unit, onHours: () -> Unit, onTrips: () -> Unit, onCoach: () -> Unit, onCompany: () -> Unit) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -404,7 +422,7 @@ fun MoreScreen(onScan: () -> Unit, onReport: () -> Unit, onHours: () -> Unit, on
         item { MenuCard("ZZP Coach", "Persoonlijke acties voor btw, KOR, uren en cashflow.", onCoach) }
         item { MenuCard("Urenregistratie", "Registreer zakelijke uren en volg het urencriterium.", onHours) }
         item { MenuCard("Rittenregistratie", "Bewaar zakelijke kilometers en bereken €0,25/km.", onTrips) }
-        item { MenuCard("Bedrijfsprofiel", "KvK, BTW-id, IBAN en factuurgegevens.", {}) }
+        item { MenuCard("Bedrijfsprofiel", "KvK, BTW-id, IBAN en factuurgegevens.", onCompany) }
         item { MenuCard("Rapporten & archief", "Jaaroverzicht, documenten en export voor boekhouder.", {}) }
     }
 }

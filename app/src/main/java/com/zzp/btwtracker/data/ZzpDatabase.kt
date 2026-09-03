@@ -55,9 +55,10 @@ interface TransactionDao {
         InvoiceEntity::class,
         ReceiptInboxEntity::class,
         WorkSessionEntity::class,
-        BusinessTripEntity::class
+        BusinessTripEntity::class,
+        CompanyProfileEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class ZzpDatabase : RoomDatabase() {
@@ -67,6 +68,7 @@ abstract class ZzpDatabase : RoomDatabase() {
     abstract fun receiptInboxDao(): ReceiptInboxDao
     abstract fun workSessionDao(): WorkSessionDao
     abstract fun businessTripDao(): BusinessTripDao
+    abstract fun companyProfileDao(): CompanyProfileDao
 
     companion object {
         @Volatile private var instance: ZzpDatabase? = null
@@ -136,6 +138,11 @@ abstract class ZzpDatabase : RoomDatabase() {
                 db.execSQL("CREATE TABLE IF NOT EXISTS business_trips (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, dateEpochDay INTEGER NOT NULL, origin TEXT NOT NULL, destination TEXT NOT NULL, purpose TEXT NOT NULL, kilometersTimes10 INTEGER NOT NULL, createdAt INTEGER NOT NULL)")
             }
         }
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS company_profile (id INTEGER NOT NULL PRIMARY KEY, tradeName TEXT NOT NULL, ownerName TEXT NOT NULL, address TEXT NOT NULL, postalCode TEXT NOT NULL, city TEXT NOT NULL, kvkNumber TEXT NOT NULL, vatId TEXT NOT NULL, iban TEXT NOT NULL, email TEXT NOT NULL, paymentTermDays INTEGER NOT NULL)")
+            }
+        }
 
         fun get(context: Context): ZzpDatabase = instance ?: synchronized(this) {
             instance ?: Room.databaseBuilder(
@@ -143,7 +150,7 @@ abstract class ZzpDatabase : RoomDatabase() {
                 ZzpDatabase::class.java,
                 "zzp_btw_tracker.db"
             )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .build()
                 .also { instance = it }
         }

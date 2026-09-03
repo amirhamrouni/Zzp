@@ -10,6 +10,7 @@ import com.zzp.btwtracker.data.TransactionEntity
 import com.zzp.btwtracker.data.ZzpDatabase
 import com.zzp.btwtracker.data.WorkSessionEntity
 import com.zzp.btwtracker.data.BusinessTripEntity
+import com.zzp.btwtracker.data.CompanyProfileEntity
 import com.zzp.btwtracker.tax.BelastingdienstAggregator
 import com.zzp.btwtracker.tax.BelastingdienstReport
 import com.zzp.btwtracker.tax.DutchVatEngine
@@ -32,6 +33,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val receiptInboxDao = db.receiptInboxDao()
     private val workSessionDao = db.workSessionDao()
     private val businessTripDao = db.businessTripDao()
+    private val companyProfileDao = db.companyProfileDao()
 
     val transactions: StateFlow<List<TransactionEntity>> = dao.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -49,6 +51,17 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
     val businessTrips = businessTripDao.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val companyProfile = companyProfileDao.observe()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    fun saveCompanyProfile(profile: CompanyProfileEntity, onDone: (Result<Unit>) -> Unit = {}) {
+        viewModelScope.launch { onDone(runCatching {
+            require(profile.tradeName.isNotBlank()) { "Bedrijfsnaam is verplicht" }
+            require(profile.kvkNumber.length == 8 && profile.kvkNumber.all(Char::isDigit)) { "KvK-nummer moet 8 cijfers bevatten" }
+            require(profile.paymentTermDays in 1..120) { "Ongeldige betaaltermijn" }
+            companyProfileDao.save(profile.copy(iban = profile.iban.replace(" ", "").uppercase(), vatId = profile.vatId.replace(" ", "").uppercase()))
+        }) }
+    }
 
     fun addWorkSession(project: String, minutes: Int, description: String, date: LocalDate, onDone: (Result<Long>) -> Unit = {}) {
         viewModelScope.launch { onDone(runCatching {
