@@ -53,9 +53,11 @@ interface TransactionDao {
         TransactionEntity::class,
         CustomerEntity::class,
         InvoiceEntity::class,
-        ReceiptInboxEntity::class
+        ReceiptInboxEntity::class,
+        WorkSessionEntity::class,
+        BusinessTripEntity::class
     ],
-    version = 2,
+    version = 3,
     exportSchema = false
 )
 abstract class ZzpDatabase : RoomDatabase() {
@@ -63,6 +65,8 @@ abstract class ZzpDatabase : RoomDatabase() {
     abstract fun customerDao(): CustomerDao
     abstract fun invoiceDao(): InvoiceDao
     abstract fun receiptInboxDao(): ReceiptInboxDao
+    abstract fun workSessionDao(): WorkSessionDao
+    abstract fun businessTripDao(): BusinessTripDao
 
     companion object {
         @Volatile private var instance: ZzpDatabase? = null
@@ -126,13 +130,20 @@ abstract class ZzpDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("CREATE TABLE IF NOT EXISTS work_sessions (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, dateEpochDay INTEGER NOT NULL, minutes INTEGER NOT NULL, project TEXT NOT NULL, description TEXT NOT NULL, createdAt INTEGER NOT NULL)")
+                db.execSQL("CREATE TABLE IF NOT EXISTS business_trips (id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, dateEpochDay INTEGER NOT NULL, origin TEXT NOT NULL, destination TEXT NOT NULL, purpose TEXT NOT NULL, kilometersTimes10 INTEGER NOT NULL, createdAt INTEGER NOT NULL)")
+            }
+        }
+
         fun get(context: Context): ZzpDatabase = instance ?: synchronized(this) {
             instance ?: Room.databaseBuilder(
                 context.applicationContext,
                 ZzpDatabase::class.java,
                 "zzp_btw_tracker.db"
             )
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .build()
                 .also { instance = it }
         }

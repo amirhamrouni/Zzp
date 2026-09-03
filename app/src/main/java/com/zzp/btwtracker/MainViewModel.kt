@@ -8,6 +8,8 @@ import com.zzp.btwtracker.data.InvoiceEntity
 import com.zzp.btwtracker.data.ReceiptInboxEntity
 import com.zzp.btwtracker.data.TransactionEntity
 import com.zzp.btwtracker.data.ZzpDatabase
+import com.zzp.btwtracker.data.WorkSessionEntity
+import com.zzp.btwtracker.data.BusinessTripEntity
 import com.zzp.btwtracker.tax.BelastingdienstAggregator
 import com.zzp.btwtracker.tax.BelastingdienstReport
 import com.zzp.btwtracker.tax.DutchVatEngine
@@ -28,6 +30,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private val customerDao = db.customerDao()
     private val invoiceDao = db.invoiceDao()
     private val receiptInboxDao = db.receiptInboxDao()
+    private val workSessionDao = db.workSessionDao()
+    private val businessTripDao = db.businessTripDao()
 
     val transactions: StateFlow<List<TransactionEntity>> = dao.observeAll()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
@@ -40,6 +44,26 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     val pendingReceipts: StateFlow<List<ReceiptInboxEntity>> = receiptInboxDao.observePending()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    val workSessions = workSessionDao.observeAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val businessTrips = businessTripDao.observeAll()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    fun addWorkSession(project: String, minutes: Int, description: String, date: LocalDate, onDone: (Result<Long>) -> Unit = {}) {
+        viewModelScope.launch { onDone(runCatching {
+            require(project.isNotBlank()) { "Project is verplicht" }; require(minutes in 1..1440) { "Voer geldige minuten in" }
+            workSessionDao.insert(WorkSessionEntity(dateEpochDay = date.toEpochDay(), minutes = minutes, project = project.trim(), description = description.trim()))
+        }) }
+    }
+
+    fun addBusinessTrip(origin: String, destination: String, purpose: String, kilometers: BigDecimal, date: LocalDate, onDone: (Result<Long>) -> Unit = {}) {
+        viewModelScope.launch { onDone(runCatching {
+            require(origin.isNotBlank() && destination.isNotBlank() && purpose.isNotBlank()) { "Vul alle velden in" }
+            require(kilometers > BigDecimal.ZERO) { "Afstand moet groter zijn dan 0" }
+            businessTripDao.insert(BusinessTripEntity(dateEpochDay = date.toEpochDay(), origin = origin.trim(), destination = destination.trim(), purpose = purpose.trim(), kilometersTimes10 = kilometers.movePointRight(1).setScale(0, RoundingMode.HALF_UP).intValueExact()))
+        }) }
+    }
 
     private val _quarter = MutableStateFlow(Quarter.from(LocalDate.now()))
     val quarter: StateFlow<Quarter> = _quarter

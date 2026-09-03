@@ -390,7 +390,7 @@ private fun InvoiceCard(invoice: InvoiceEntity, onPaid: () -> Unit) {
 }
 
 @Composable
-fun MoreScreen(onScan: () -> Unit, onReport: () -> Unit) {
+fun MoreScreen(onScan: () -> Unit, onReport: () -> Unit, onHours: () -> Unit, onTrips: () -> Unit, onCoach: () -> Unit) {
     LazyColumn(
         modifier = Modifier.fillMaxSize().padding(horizontal = 18.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
@@ -401,8 +401,9 @@ fun MoreScreen(onScan: () -> Unit, onReport: () -> Unit) {
         }
         item { MenuCard("Bonnetjes & OCR", "Scan en controleer zakelijke bonnetjes.", onScan) }
         item { MenuCard("BTW-aangifte", "Bekijk rubrieken, controleer en exporteer PDF/CSV.", onReport) }
-        item { MenuCard("Urenregistratie", "Volgende uitbreiding: urencriterium en projecttimer.", {}) }
-        item { MenuCard("Rittenregistratie", "Volgende uitbreiding: zakelijke kilometers en €0,25/km monitor.", {}) }
+        item { MenuCard("ZZP Coach", "Persoonlijke acties voor btw, KOR, uren en cashflow.", onCoach) }
+        item { MenuCard("Urenregistratie", "Registreer zakelijke uren en volg het urencriterium.", onHours) }
+        item { MenuCard("Rittenregistratie", "Bewaar zakelijke kilometers en bereken €0,25/km.", onTrips) }
         item { MenuCard("Bedrijfsprofiel", "KvK, BTW-id, IBAN en factuurgegevens.", {}) }
         item { MenuCard("Rapporten & archief", "Jaaroverzicht, documenten en export voor boekhouder.", {}) }
     }

@@ -12,6 +12,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Test
 import java.math.BigDecimal
 import java.time.LocalDate
+import com.zzp.btwtracker.coach.ZzpCoach
 
 class CoreLogicTest {
     @Test
@@ -59,5 +60,11 @@ class CoreLogicTest {
         assertEquals(BigDecimal("12.10"), parsed.totalAmount)
         assertEquals(BigDecimal("2.10"), parsed.vatAmount)
         assertNotNull(parsed.rawText)
+    }
+
+    @Test fun coachWarnsNearKorLimit() {
+        val result = ZzpCoach.build(1_700_000, 600 * 60, 42_000, emptyList(), emptyList())
+        assertEquals(true, result.any { it.title.contains("KOR") })
+        assertEquals(true, result.any { it.title.contains("Urencriterium") })
     }
 }
