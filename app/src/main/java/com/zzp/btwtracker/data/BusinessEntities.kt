@@ -30,6 +30,8 @@ data class InvoiceEntity(
     val customerId: Long? = null,
     val customerName: String,
     val customerEmail: String? = null,
+    val customerAddress: String? = null,
+    val customerVatNumber: String? = null,
     val issueDateEpochDay: Long,
     val dueDateEpochDay: Long,
     val description: String,

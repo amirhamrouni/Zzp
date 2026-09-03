@@ -17,7 +17,7 @@ object InvoiceExportService {
         y=150f; c.drawText("Factuurnummer",40f,y,head);c.drawText(invoice.invoiceNumber,155f,y,body);y+=18f
         c.drawText("Factuurdatum",40f,y,head);c.drawText(LocalDate.ofEpochDay(invoice.issueDateEpochDay).toString(),155f,y,body);y+=18f
         c.drawText("Vervaldatum",40f,y,head);c.drawText(LocalDate.ofEpochDay(invoice.dueDateEpochDay).toString(),155f,y,body);y+=40f
-        c.drawText("Factuur aan",40f,y,head);y+=18f;c.drawText(invoice.customerName,40f,y,body); invoice.customerEmail?.let{y+=16f;c.drawText(it,40f,y,body)};y+=40f
+        c.drawText("Factuur aan",40f,y,head);y+=18f;c.drawText(invoice.customerName,40f,y,body); invoice.customerAddress?.let{y+=16f;c.drawText(it,40f,y,body)}; invoice.customerEmail?.let{y+=16f;c.drawText(it,40f,y,body)}; invoice.customerVatNumber?.let{y+=16f;c.drawText("BTW-id $it",40f,y,body)};y+=40f
         c.drawText("Omschrijving",40f,y,head);c.drawText("Excl. btw",350f,y,head);c.drawText("BTW",440f,y,head);c.drawText("Totaal",500f,y,head);y+=22f
         c.drawText(invoice.description.take(45),40f,y,body);c.drawText(euro(invoice.netCents),350f,y,body);c.drawText("${invoice.vatRate}%",440f,y,body);c.drawText(euro(invoice.grossCents),500f,y,body);y+=35f
         c.drawLine(40f,y,555f,y,body);y+=25f;c.drawText("BTW-bedrag",350f,y,head);c.drawText(euro(invoice.vatCents),500f,y,body);y+=24f;c.drawText("Te betalen",350f,y,head);c.drawText(euro(invoice.grossCents),500f,y,head);y+=55f

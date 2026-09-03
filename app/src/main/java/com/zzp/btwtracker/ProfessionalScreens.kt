@@ -253,6 +253,8 @@ fun InvoicesScreen(vm: MainViewModel, customers: List<CustomerEntity>, invoices:
 
     var customerName by remember { mutableStateOf("") }
     var customerEmail by remember { mutableStateOf("") }
+    var customerAddress by remember { mutableStateOf("") }
+    var customerPostal by remember { mutableStateOf("") }
     var customerCity by remember { mutableStateOf("") }
     var customerKvk by remember { mutableStateOf("") }
     var customerVat by remember { mutableStateOf("") }
@@ -301,15 +303,17 @@ fun InvoicesScreen(vm: MainViewModel, customers: List<CustomerEntity>, invoices:
                     Text("Nieuwe klant", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                     OutlinedTextField(customerName, { customerName = it }, label = { Text("Naam / bedrijf") }, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(customerEmail, { customerEmail = it }, label = { Text("E-mail") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(customerAddress, { customerAddress = it }, label = { Text("Adres") }, modifier = Modifier.fillMaxWidth())
+                    OutlinedTextField(customerPostal, { customerPostal = it }, label = { Text("Postcode") }, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(customerCity, { customerCity = it }, label = { Text("Plaats") }, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(customerKvk, { customerKvk = it.filter(Char::isDigit).take(8) }, label = { Text("KvK") }, modifier = Modifier.fillMaxWidth())
                     OutlinedTextField(customerVat, { customerVat = it }, label = { Text("BTW-nummer") }, modifier = Modifier.fillMaxWidth())
                     Button(
                         onClick = {
-                            vm.addCustomer(customerName, customerEmail, null, null, customerCity, "NL", customerKvk, customerVat, null) {
+                            vm.addCustomer(customerName, customerEmail, customerAddress, customerPostal, customerCity, "NL", customerKvk, customerVat, null) {
                                 message = if (it.isSuccess) "Klant opgeslagen" else it.exceptionOrNull()?.message
                                 if (it.isSuccess) {
-                                    customerName = ""; customerEmail = ""; customerCity = ""; customerKvk = ""; customerVat = ""
+                                    customerName = ""; customerEmail = ""; customerAddress = ""; customerPostal = ""; customerCity = ""; customerKvk = ""; customerVat = ""
                                 }
                             }
                         },

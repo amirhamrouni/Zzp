@@ -185,6 +185,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                         customerId = customer.id,
                         customerName = customer.name,
                         customerEmail = customer.email,
+                        customerAddress = listOfNotNull(customer.address, listOfNotNull(customer.postalCode, customer.city).joinToString(" ").ifBlank { null }).joinToString(", ").ifBlank { null },
+                        customerVatNumber = customer.vatNumber,
                         issueDateEpochDay = issueDate.toEpochDay(),
                         dueDateEpochDay = issueDate.plusDays(dueDays).toEpochDay(),
                         description = description.trim(),

@@ -61,7 +61,7 @@ interface TransactionDao {
         CompanyProfileEntity::class,
         DocumentEntity::class
     ],
-    version = 6,
+    version = 7,
     exportSchema = false
 )
 abstract class ZzpDatabase : RoomDatabase() {
@@ -157,6 +157,12 @@ abstract class ZzpDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE transactions ADD COLUMN category TEXT NOT NULL DEFAULT 'OVERIG'")
             }
         }
+        private val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE invoices ADD COLUMN customerAddress TEXT")
+                db.execSQL("ALTER TABLE invoices ADD COLUMN customerVatNumber TEXT")
+            }
+        }
 
         fun get(context: Context): ZzpDatabase = instance ?: synchronized(this) {
             instance ?: Room.databaseBuilder(
@@ -164,7 +170,7 @@ abstract class ZzpDatabase : RoomDatabase() {
                 ZzpDatabase::class.java,
                 "zzp_btw_tracker.db"
             )
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
                 .build()
                 .also { instance = it }
         }
