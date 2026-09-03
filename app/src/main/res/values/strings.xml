@@ -1,0 +1,8 @@
+<resources>
+    <string name="app_name">ZZP BTW Tracker</string>
+    <string name="dashboard">Overzicht</string>
+    <string name="transactions">Transacties</string>
+    <string name="scanner">Bon scannen</string>
+    <string name="vat_report">BTW-aangifte</string>
+    <string name="export">Exporteren</string>
+</resources>
