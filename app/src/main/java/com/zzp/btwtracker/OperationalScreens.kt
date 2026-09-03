@@ -56,7 +56,6 @@ fun BookingScreen(onSave: (TransactionDraft) -> Unit) {
     var date by remember { mutableStateOf(LocalDate.now().toString()) }
     var kvk by remember { mutableStateOf("") }
     var error by remember { mutableStateOf<String?>(null) }
-    val inbox by vm.pendingReceipts.collectAsState()
 
     LazyColumn(Modifier.fillMaxSize().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
         item { Text("Nieuwe boeking", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold) }
@@ -118,6 +117,7 @@ fun ReceiptScannerScreen(
     var result by remember { mutableStateOf<ReceiptScanResult?>(null) }
     var rate by remember { mutableStateOf(21) }
     var error by remember { mutableStateOf<String?>(null) }
+    val inbox by vm.pendingReceipts.collectAsState()
 
     val camera = rememberLauncherForActivityResult(ActivityResultContracts.TakePicturePreview()) { bitmap ->
         if (bitmap != null) {
