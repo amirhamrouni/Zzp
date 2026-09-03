@@ -13,7 +13,7 @@ import com.zzp.btwtracker.data.CompanyProfileEntity
     var profile by remember(saved) { mutableStateOf(saved ?: CompanyProfileEntity()) }
     var message by remember { mutableStateOf<String?>(null) }
     LazyColumn(Modifier.fillMaxSize().padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        item { Text("Bedrijfsprofiel", style=MaterialTheme.typography.headlineMedium, fontWeight=FontWeight.Bold); Text("Deze gegevens komen op je facturen.", color=MaterialTheme.colorScheme.onSurfaceVariant) }
+        item { ZzpScreenHeader("Bedrijfsprofiel", "Deze gegevens komen automatisch op je facturen") }
         item { Field("Bedrijfsnaam", profile.tradeName){profile=profile.copy(tradeName=it)} }
         item { Field("Naam ondernemer", profile.ownerName){profile=profile.copy(ownerName=it)} }
         item { Field("Adres", profile.address){profile=profile.copy(address=it)} }
@@ -23,7 +23,7 @@ import com.zzp.btwtracker.data.CompanyProfileEntity
         item { Field("IBAN",profile.iban){profile=profile.copy(iban=it)} }
         item { Field("E-mail",profile.email){profile=profile.copy(email=it)} }
         item { Field("Betaaltermijn (dagen)",profile.paymentTermDays.toString()){profile=profile.copy(paymentTermDays=it.filter(Char::isDigit).toIntOrNull()?:14)} }
-        item { Button(onClick={vm.saveCompanyProfile(profile){message=if(it.isSuccess)"Bedrijfsprofiel opgeslagen" else it.exceptionOrNull()?.message}},modifier=Modifier.fillMaxWidth()){Text("Opslaan")} }
+        item { ZzpPrimaryButton("Profiel opslaan", {vm.saveCompanyProfile(profile){message=if(it.isSuccess)"Bedrijfsprofiel opgeslagen" else it.exceptionOrNull()?.message}}, Modifier.fillMaxWidth(), profile.tradeName.isNotBlank() && profile.ownerName.isNotBlank()) }
         message?.let { item { Text(it,color=MaterialTheme.colorScheme.primary) } }
     }
 }

@@ -25,11 +25,11 @@ import java.time.LocalDate
         val now=LocalDate.now(); vm.archiveDocument(DocumentEntity(uri=it.toString(),displayName=name,mimeType=context.contentResolver.getType(it)?:"application/octet-stream",category=category,year=now.year,quarter=(now.monthValue-1)/3+1)){r->status=if(r.isSuccess)"Document opgeslagen" else r.exceptionOrNull()?.message}
     }}
     LazyColumn(Modifier.fillMaxSize().padding(18.dp),verticalArrangement=Arrangement.spacedBy(10.dp)){
-        item{Text("Documenten",style=MaterialTheme.typography.headlineMedium,fontWeight=FontWeight.Bold);Text("Bewaar originele bestanden per jaar en kwartaal.",color=MaterialTheme.colorScheme.onSurfaceVariant)}
+        item{ZzpScreenHeader("Documenten", "Bewaar originele bestanden per jaar en kwartaal")}
         item{Row(horizontalArrangement=Arrangement.spacedBy(6.dp)){listOf("BON","FACTUUR","BANK","OVERIG").forEach{FilterChip(category==it,{category=it},label={Text(it.lowercase().replaceFirstChar { c -> c.uppercase() })})}}}
-        item{Button(onClick={picker.launch(arrayOf("application/pdf","image/*","text/csv"))},modifier=Modifier.fillMaxWidth()){Text("Document toevoegen")}}
+        item{ZzpPrimaryButton("Document toevoegen", {picker.launch(arrayOf("application/pdf","image/*","text/csv"))}, Modifier.fillMaxWidth())}
         status?.let{item{Text(it,color=MaterialTheme.colorScheme.primary)}}
-        if(documents.isEmpty())item{Text("Nog geen documenten opgeslagen.")}
+        if(documents.isEmpty())item{ZzpEmptyState("Je archief is nog leeg", "Voeg bonnetjes, facturen, bankbestanden of CSV-exports toe.")}
         items(documents,key={it.id}){d->Card(Modifier.fillMaxWidth()){Column(Modifier.padding(14.dp)){Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween){Text(d.displayName,fontWeight=FontWeight.SemiBold);Text("${d.year} · Q${d.quarter}")};Text(d.category,style=MaterialTheme.typography.labelSmall,color=MaterialTheme.colorScheme.primary);Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End){TextButton(onClick={runCatching{context.startActivity(Intent(Intent.ACTION_VIEW,android.net.Uri.parse(d.uri)).apply{setDataAndType(android.net.Uri.parse(d.uri),d.mimeType);addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)})}}){Text("Open")};TextButton(onClick={vm.deleteDocument(d.id)}){Text("Verwijder")}}}}}
     }
 }

@@ -58,7 +58,7 @@ fun BookingScreen(onSave: (TransactionDraft) -> Unit) {
     var error by remember { mutableStateOf<String?>(null) }
 
     LazyColumn(Modifier.fillMaxSize().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        item { Text("Nieuwe boeking", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold) }
+        item { ZzpScreenHeader("Nieuwe boeking", "Boek omzet, kosten of verlegde BTW") }
         item {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 FilterChip(type == TransactionType.INCOME, { type = TransactionType.INCOME; treatment = VatTreatment.DOMESTIC }, label = { Text("Omzet") })
@@ -86,12 +86,12 @@ fun BookingScreen(onSave: (TransactionDraft) -> Unit) {
         item { OutlinedTextField(kvk, { kvk = it.filter(Char::isDigit).take(8) }, label = { Text("KvK (optioneel)") }, modifier = Modifier.fillMaxWidth()) }
         error?.let { item { Text(it, color = MaterialTheme.colorScheme.error) } }
         item {
-            Button(onClick = {
+            ZzpPrimaryButton(text = "Boeking opslaan", onClick = {
                 val parsedAmount = amount.replace(',', '.').toBigDecimalOrNull()
                 val parsedDate = runCatching { LocalDate.parse(date) }.getOrNull()
                 if (parsedAmount == null || parsedDate == null) error = "Controleer bedrag en datum."
                 else onSave(TransactionDraft(type, description, parsedAmount, rate, treatment, parsedDate, kvkNumber = kvk.ifBlank { null }))
-            }, modifier = Modifier.fillMaxWidth()) { Text("Boeking opslaan") }
+            }, modifier = Modifier.fillMaxWidth(), enabled = description.isNotBlank() && amount.replace(',', '.').toBigDecimalOrNull() != null)
         }
     }
 }
@@ -138,7 +138,7 @@ fun ReceiptScannerScreen(
     }
 
     LazyColumn(Modifier.fillMaxSize().padding(18.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        item { Text("Bon scannen", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold) }
+        item { ZzpScreenHeader("Bon scannen", "Camera of galerij → OCR → controleren → boeken") }
         item {
             Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.spacedBy(8.dp)){Button(onClick = {
                 if (ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) camera.launch(null)
@@ -165,7 +165,7 @@ fun ReceiptScannerScreen(
             }
             item { RateSelectorPublic(rate) { rate = it } }
             item {
-                Button(onClick = {
+                ZzpPrimaryButton(text = "Boek als kosten", onClick = {
                     val total = scan.totalAmount
                     if (total == null) error = "Totaalbedrag niet gevonden."
                     else vm.save(
@@ -180,7 +180,7 @@ fun ReceiptScannerScreen(
                             explicitVatAmount = scan.vatAmount
                         )
                     ) { if (it.isSuccess) onBooked() }
-                }, modifier = Modifier.fillMaxWidth()) { Text("Boek als kosten") }
+                }, modifier = Modifier.fillMaxWidth())
             }
             item {
                 TextButton(onClick = {
@@ -227,7 +227,7 @@ fun VatReportScreen(vm: MainViewModel, report: BelastingdienstReport) {
     }
 
     LazyColumn(Modifier.fillMaxSize().padding(18.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        item { Text("BTW-aangifte", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold) }
+        item { ZzpScreenHeader("BTW-aangifte", "Controleer de officiële rubrieken voor ${report.quarter}") }
         item {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 TextButton(onClick = { vm.moveQuarter(-1) }) { Text("← Vorige") }

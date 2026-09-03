@@ -18,12 +18,12 @@ fun HoursScreen(vm: MainViewModel, sessions: List<WorkSessionEntity>) {
     var project by remember { mutableStateOf("") }; var minutes by remember { mutableStateOf("") }; var note by remember { mutableStateOf("") }
     val yearMinutes = sessions.filter { LocalDate.ofEpochDay(it.dateEpochDay).year == LocalDate.now().year }.sumOf { it.minutes }
     LazyColumn(Modifier.fillMaxSize().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        item { Text("Urenregistratie", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold) }
+        item { ZzpScreenHeader("Urenregistratie", "Volg zakelijke uren en je urencriterium") }
         item { ProgressCard("Urencriterium ${LocalDate.now().year}", yearMinutes / 60f, 1225f, "${yearMinutes / 60} van 1.225 uur") }
         item { OutlinedTextField(project, { project = it }, label = { Text("Project") }, modifier = Modifier.fillMaxWidth()) }
         item { OutlinedTextField(minutes, { minutes = it.filter(Char::isDigit) }, label = { Text("Minuten") }, modifier = Modifier.fillMaxWidth()) }
         item { OutlinedTextField(note, { note = it }, label = { Text("Werkzaamheden") }, modifier = Modifier.fillMaxWidth()) }
-        item { Button(onClick = { vm.addWorkSession(project, minutes.toIntOrNull() ?: 0, note, LocalDate.now()) { if (it.isSuccess) { project=""; minutes=""; note="" } } }, modifier = Modifier.fillMaxWidth()) { Text("Uren opslaan") } }
+        item { ZzpPrimaryButton("Uren opslaan", { vm.addWorkSession(project, minutes.toIntOrNull() ?: 0, note, LocalDate.now()) { if (it.isSuccess) { project=""; minutes=""; note="" } } }, Modifier.fillMaxWidth(), project.isNotBlank() && (minutes.toIntOrNull() ?: 0) > 0) }
         items(sessions, key = { it.id }) { s -> Card(Modifier.fillMaxWidth()) { Row(Modifier.padding(14.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) { Column { Text(s.project, fontWeight = FontWeight.SemiBold); Text(LocalDate.ofEpochDay(s.dateEpochDay).toString(), style = MaterialTheme.typography.bodySmall) }; Text("${s.minutes / 60}u ${s.minutes % 60}m") } } }
     }
 }
@@ -34,13 +34,13 @@ fun TripsScreen(vm: MainViewModel, trips: List<BusinessTripEntity>) {
     val yearTrips = trips.filter { LocalDate.ofEpochDay(it.dateEpochDay).year == LocalDate.now().year }
     val tenths = yearTrips.sumOf { it.kilometersTimes10 }; val deductionCents = tenths * 25 / 10
     LazyColumn(Modifier.fillMaxSize().padding(18.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        item { Text("Rittenregistratie", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold) }
+        item { ZzpScreenHeader("Rittenregistratie", "Bewaar elke zakelijke rit en aftrekindicatie") }
         item { Card(Modifier.fillMaxWidth()) { Column(Modifier.padding(16.dp)) { Text("Zakelijke kilometers ${LocalDate.now().year}"); Text("${tenths / 10.0} km", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold); Text("Aftrekindicatie € %.2f bij €0,25/km".format(deductionCents / 100.0)) } } }
         item { OutlinedTextField(from, { from = it }, label={Text("Van")}, modifier=Modifier.fillMaxWidth()) }
         item { OutlinedTextField(to, { to = it }, label={Text("Naar")}, modifier=Modifier.fillMaxWidth()) }
         item { OutlinedTextField(purpose, { purpose = it }, label={Text("Zakelijk doel")}, modifier=Modifier.fillMaxWidth()) }
         item { OutlinedTextField(km, { km = it.filter { c -> c.isDigit() || c==',' || c=='.' } }, label={Text("Kilometers")}, modifier=Modifier.fillMaxWidth()) }
-        item { Button(onClick={ vm.addBusinessTrip(from,to,purpose,km.replace(',','.').toBigDecimalOrNull() ?: BigDecimal.ZERO,LocalDate.now()) { if(it.isSuccess){from="";to="";purpose="";km=""} } }, modifier=Modifier.fillMaxWidth()){Text("Rit opslaan")} }
+        item { ZzpPrimaryButton("Rit opslaan", { vm.addBusinessTrip(from,to,purpose,km.replace(',','.').toBigDecimalOrNull() ?: BigDecimal.ZERO,LocalDate.now()) { if(it.isSuccess){from="";to="";purpose="";km=""} } }, Modifier.fillMaxWidth(), from.isNotBlank() && to.isNotBlank() && (km.replace(',','.').toDoubleOrNull() ?: 0.0) > 0.0) }
         items(trips, key={it.id}) { t -> Card(Modifier.fillMaxWidth()){ Column(Modifier.padding(14.dp)){ Text("${t.origin} → ${t.destination}", fontWeight=FontWeight.SemiBold); Text("${t.purpose} · ${t.kilometersTimes10/10.0} km", style=MaterialTheme.typography.bodySmall) } } }
     }
 }
@@ -52,7 +52,7 @@ fun CoachScreen(transactions: List<TransactionEntity>, invoices: List<InvoiceEnt
     val annualMinutes = sessions.filter { LocalDate.ofEpochDay(it.dateEpochDay).year==year }.sumOf { it.minutes }
     val insights = ZzpCoach.build(annualIncome, annualMinutes, vatReserveCents.coerceAtLeast(0), invoices, receipts)
     LazyColumn(Modifier.fillMaxSize().padding(18.dp), verticalArrangement=Arrangement.spacedBy(10.dp)) {
-        item { Text("ZZP Coach", style=MaterialTheme.typography.headlineMedium, fontWeight=FontWeight.Bold); Text("Concrete acties uit je eigen administratie.", color=MaterialTheme.colorScheme.onSurfaceVariant) }
+        item { ZzpScreenHeader("ZZP Coach", "Concrete acties uit je eigen administratie") }
         item { ProgressCard("KOR-monitor", annualIncome/100f, ZzpCoach.KOR_LIMIT_CENTS/100f, "€ %.2f van €20.000".format(annualIncome/100.0)) }
         items(insights) { insight -> Card(Modifier.fillMaxWidth()){ Column(Modifier.padding(16.dp)){ Text(insight.title, fontWeight=FontWeight.Bold); Text(insight.detail); Text(insight.level, style=MaterialTheme.typography.labelSmall, color=MaterialTheme.colorScheme.primary) } } }
         item { Text("Indicaties zijn administratieve hulpmiddelen en geen belastingadvies.", style=MaterialTheme.typography.bodySmall, color=MaterialTheme.colorScheme.onSurfaceVariant) }

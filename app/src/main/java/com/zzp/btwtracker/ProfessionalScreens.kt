@@ -96,8 +96,7 @@ fun ProfessionalOverviewScreen(
     ) {
         item {
             Spacer(Modifier.height(8.dp))
-            Text("Overzicht", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
-            Text("${report.quarter} · ${if (days >= 0) "nog $days dagen" else "deadline verstreken"}", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            ZzpScreenHeader("Overzicht", "${report.quarter} · ${if (days >= 0) "nog $days dagen" else "deadline verstreken"}")
         }
         item {
             Card(
@@ -208,7 +207,7 @@ fun AdministrationScreen(transactions: List<TransactionEntity>, onDelete: (Long)
     }
     Column(Modifier.fillMaxSize().padding(horizontal = 18.dp)) {
         Spacer(Modifier.height(8.dp))
-        Text("Administratie", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+        ZzpScreenHeader("Administratie", "Alle inkomsten en zakelijke uitgaven op één plek")
         Spacer(Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             FilterChip(filter == "ALL", { filter = "ALL" }, label = { Text("Alles") })
@@ -280,7 +279,7 @@ fun InvoicesScreen(vm: MainViewModel, customers: List<CustomerEntity>, invoices:
 
         when (mode) {
             "LIST" -> {
-                if (invoices.isEmpty()) item { Text("Nog geen facturen. Maak je eerste factuur aan.") }
+                if (invoices.isEmpty()) item { ZzpEmptyState("Nog geen facturen", "Maak je eerste professionele factuur aan.", Icons.Default.Description) }
                 items(invoices, key = { it.id }) { invoice ->
                     InvoiceCard(invoice = invoice, onPaid = { vm.markInvoicePaid(invoice.id) }, onDelete = { vm.deleteInvoice(invoice.id) }, onShare = {
                         runCatching {
@@ -354,7 +353,8 @@ fun InvoicesScreen(vm: MainViewModel, customers: List<CustomerEntity>, invoices:
                                 FilterChip(vatRate == rate, { vatRate = rate }, label = { Text("$rate%") })
                             }
                         }
-                        Button(
+                        ZzpPrimaryButton(
+                            text = "Factuur aanmaken",
                             onClick = {
                                 val customer = customers.firstOrNull { it.id == selectedCustomerId }
                                 val parsed = amount.replace(',', '.').toBigDecimalOrNull()
@@ -370,7 +370,7 @@ fun InvoicesScreen(vm: MainViewModel, customers: List<CustomerEntity>, invoices:
                                 }
                             },
                             modifier = Modifier.fillMaxWidth()
-                        ) { Text("Factuur aanmaken") }
+                        )
                         Text("Factuurnummers worden automatisch per jaar opgebouwd (bijv. 2026-001).", style = MaterialTheme.typography.bodySmall)
                     }
                 }
@@ -418,7 +418,7 @@ fun MoreScreen(onScan: () -> Unit, onReport: () -> Unit, onHours: () -> Unit, on
     ) {
         item {
             Spacer(Modifier.height(8.dp))
-            Text("Meer", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+            ZzpScreenHeader("Meer", "Gereedschap voor je volledige ZZP-administratie")
         }
         item { MenuCard("Bonnetjes & OCR", "Scan en controleer zakelijke bonnetjes.", onScan) }
         item { MenuCard("BTW-aangifte", "Bekijk rubrieken, controleer en exporteer PDF/CSV.", onReport) }

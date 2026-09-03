@@ -12,14 +12,21 @@ import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.MoreHoriz
 import androidx.compose.material.icons.filled.ReceiptLong
-import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.material.icons.filled.EditNote
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -27,6 +34,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.zzp.btwtracker.ui.ZzpTheme
 
@@ -52,6 +61,7 @@ private enum class AppScreen {
     MORE
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ZzpProfessionalApp(vm: MainViewModel = viewModel()) {
     var screen by remember { mutableStateOf(AppScreen.OVERVIEW) }
@@ -68,6 +78,7 @@ private fun ZzpProfessionalApp(vm: MainViewModel = viewModel()) {
     val documents by vm.documents.collectAsState()
 
     Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
@@ -85,8 +96,12 @@ private fun ZzpProfessionalApp(vm: MainViewModel = viewModel()) {
                 NavigationBarItem(
                     selected = false,
                     onClick = { quickAddOpen = true },
-                    icon = { Icon(Icons.Default.Add, null) },
-                    label = { Text("Nieuw") }
+                    icon = {
+                        FloatingActionButton(onClick = { quickAddOpen = true }) {
+                            Icon(Icons.Default.Add, "Nieuwe boeking")
+                        }
+                    },
+                    label = null
                 )
                 NavigationBarItem(
                     selected = screen == AppScreen.INVOICES,
@@ -140,24 +155,24 @@ private fun ZzpProfessionalApp(vm: MainViewModel = viewModel()) {
     }
 
     if (quickAddOpen) {
-        AlertDialog(
-            onDismissRequest = { quickAddOpen = false },
-            title = { Text("Nieuwe actie") },
-            text = {
-                Text("Kies wat je wilt toevoegen. Bon scannen gebruikt OCR; handmatig boeken ondersteunt omzet, kosten en EU/verlegd BTW.")
-            },
-            confirmButton = {
-                TextButton(onClick = {
+        ModalBottomSheet(onDismissRequest = { quickAddOpen = false }) {
+            Column(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text("Nieuwe boeking", style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
+                Text("Wat wil je toevoegen?", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                ZzpPrimaryButton(text = "Bon scannen met OCR", onClick = {
                     quickAddOpen = false
                     screen = AppScreen.SCANNER
-                }) { Text("Bon scannen") }
-            },
-            dismissButton = {
-                TextButton(onClick = {
+                }, modifier = Modifier.fillMaxWidth())
+                androidx.compose.material3.OutlinedButton(onClick = {
                     quickAddOpen = false
                     screen = AppScreen.BOOKING
-                }) { Text("Handmatig boeken") }
+                }, modifier = Modifier.fillMaxWidth()) {
+                    Icon(Icons.Default.EditNote, null)
+                    Text("  Handmatig boeken")
+                }
+                Text("OCR herkent bedrag, BTW, datum en KvK-nummer. Je controleert alles vóór het boeken.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Spacer(Modifier.height(18.dp))
             }
-        )
+        }
     }
 }
